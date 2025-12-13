@@ -205,31 +205,108 @@ can_attack_ignoring(PieceType, _, FromR, FromC, ToR, ToC, _IgnoreR, _IgnoreC) :-
 
 % Check if a move creates an absolute pin and return its score
 % An absolute pin occurs when a piece cannot move without exposing the king to check
+% Tarea 6
 move_creates_absolute_pin(FromR, FromC, ToR, ToC, PinScore) :-
-   fail. 
+    move(FromR, FromC, ToR, ToC),
+    piece(PinnerType, Color, FromR, FromC),
+    can_attack_along_line(PinnerType, _),
+    opposite_color(Color, EnemyColor),
+    piece(PinnedType, EnemyColor, PR, PC),
+    piece(k, EnemyColor, KR, KC),
+    (PR, PC) \= (FromR, FromC),
+    (KR, KC) \= (FromR, FromC),
+    on_same_line(ToR, ToC, PR, PC, KR, KC),
+    path_clear_ignoring(ToR, ToC, PR, PC, FromR, FromC),
+    path_clear_ignoring(PR, PC, KR, KC, FromR, FromC),
+    piece_value(PinnedType, PinnedValue),
+    piece_value(k, KingValue),
+    piece_value(PinnerType, PinnerValue),
+    PinScore is (PinnedValue + KingValue - PinnerValue) // 2.
 
 % Check if a move creates a relative pin and return its score
 % A relative pin occurs when a piece cannot move without exposing a more valuable piece
 % Simplifying assumptions: TargetValue > PinnedValue AND TargetValue > PinnerValue
+% Tarea 7
 move_creates_relative_pin(FromR, FromC, ToR, ToC, PinScore) :-
-  fail.
+    move(FromR, FromC, ToR, ToC),
+    piece(PinnerType, Color, FromR, FromC),
+    can_attack_along_line(PinnerType, _),
+    opposite_color(Color, EnemyColor),
+    piece(PinnedType, EnemyColor, PR, PC),
+    piece(TargetType, EnemyColor, TR, TC),
+    TargetType \= k,
+    (PR, PC) \= (TR, TC),
+    (PR, PC) \= (FromR, FromC),
+    (TR, TC) \= (FromR, FromC),
+    on_same_line(ToR, ToC, PR, PC, TR, TC),
+    path_clear_ignoring(ToR, ToC, PR, PC, FromR, FromC),
+    path_clear_ignoring(PR, PC, TR, TC, FromR, FromC),
+    piece_value(PinnedType, PinnedValue),
+    piece_value(TargetType, TargetValue),
+    piece_value(PinnerType, PinnerValue),
+    TargetValue > PinnedValue,
+    TargetValue > PinnerValue,
+    PinScore is (PinnedValue + TargetValue - PinnerValue) // 2.
 
 % Check if a move creates a fork and return its score
 % A fork occurs when the moved piece attacks two or more valuable opponent pieces
+% Tarea 5
 move_creates_fork(FromR, FromC, ToR, ToC, ForkScore) :-
-  fail.
+    move(FromR, FromC, ToR, ToC),
+    piece(AttackerType, Color, FromR, FromC),
+    opposite_color(Color, TargetColor),
+    piece(Target1Type, TargetColor, R1, C1),
+    piece(Target2Type, TargetColor, R2, C2),
+    (R1, C1) \= (R2, C2),
+    (R1, C1) \= (FromR, FromC),
+    (R2, C2) \= (FromR, FromC),
+    (Target1Type = k; Target1Type = q; Target1Type = r),
+    (Target2Type = k; Target2Type = q; Target2Type = r),
+    can_attack_ignoring(AttackerType, Color, ToR, ToC, R1, C1, FromR, FromC),
+    can_attack_ignoring(AttackerType, Color, ToR, ToC, R2, C2, FromR, FromC),
+    piece_value(Target1Type, Target1Value),
+    piece_value(Target2Type, Target2Value),
+    piece_value(AttackerType, AttackerValue),
+    ForkScore is Target1Value + Target2Value - AttackerValue.
 
 % Check if a move creates a skewer and return its score
 % A skewer forces a valuable piece to move, exposing a less valuable piece behind it
+% Tarea 4
 move_creates_skewer(FromR, FromC, ToR, ToC, SkewerScore) :-
-  fail.
+    move(FromR, FromC, ToR, ToC),
+    piece(AttackerType, Color, FromR, FromC),
+    can_attack_along_line(AttackerType, _),
+    opposite_color(Color, TargetColor),
+    piece(FrontType, TargetColor, R2, C2),
+    piece(BehindType, TargetColor, R3, C3),
+    (R2, C2) \= (R3, C3),
+    (FrontType = k; FrontType = q; FrontType = r),
+    on_same_line(ToR, ToC, R2, C2, R3, C3),
+    path_clear_ignoring(ToR, ToC, R2, C2, FromR, FromC),
+    path_clear_ignoring(R2, C2, R3, C3, FromR, FromC),
+    piece_value(FrontType, FrontValue),
+    piece_value(BehindType, BehindValue),
+    piece_value(AttackerType, AttackerValue),
+    SkewerScore is FrontValue + BehindValue - AttackerValue.
 
 % Check if a move is a capture and return MVV-LVA score
 % MVV-LVA = Most Valuable Victim - Least Valuable Attacker
+% Tarea 2
 move_creates_capture(FromR, FromC, ToR, ToC, MvvLvaScore) :-
-  fail.
+    move(FromR, FromC, ToR, ToC),
+    piece(AttackerType, AttackerColor, FromR, FromC),
+    piece(VictimType, VictimColor, ToR, ToC),
+    opposite_color(AttackerColor, VictimColor),
+    mvv_lva_piece_value(VictimType, VictimValue),
+    mvv_lva_piece_value(AttackerType, AttackerValue),
+    MvvLvaScore is (VictimValue * 10) - AttackerValue.
 
 % Check if a move is a pawn promotion
-move_creates_promotion(FromR, FromC, ToR, ToC) :-
-  fail.
+% Tarea 3
+move_creates_promotion(FromR, FromC, ToR, _ToC) :-
+    piece(p, white, FromR, FromC),
+    ToR =:= 8.
+move_creates_promotion(FromR, FromC, ToR, _ToC) :-
+    piece(p, black, FromR, FromC),
+    ToR =:= 1.
 
